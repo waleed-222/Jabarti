@@ -1,0 +1,62 @@
+import torch
+
+from jabarti.llm.generation.sampling import sample
+from jabarti.llm.data.chat import format_chat, system_for
+
+
+@torch.no_grad()
+def generate_ids(model, prompt_ids, config, eos_id=None, device=None):
+    
+    model.eval()
+    device= device or next(model.parameters()).device
+    
+    generator = None
+    if config.seed is not None:
+        generator = torch.Generator(device=device).manual_seed(config.seed)
+        
+    ids = torch.tensor([prompt_ids], dtype=torch.long, device=device)
+    max_seq_len = model.config.max_seq_len
+    
+    next_input = ids
+    kv_caches = None
+    
+    for _ in range(config.max_new_tokens):
+        if ids.size(1) >= max_seq_len:
+            break
+        
+        logits, loss, updadted_caches = model(next_input, kv_cache= kv_caches, use_cache=config.use_cache)
+        
+        kv_caches = updadted_caches
+        next_id = sample(logits[0, -1], config, generator)
+        
+        ids = torch.cat([ids, torch.tensor([[next_id]], device=device)], dim=1)
+        
+        if  eos_id is not None and next_id == eos_id:
+            break
+        
+        if config.use_cache:
+            next_input = ids [:, -1:] # just newest token
+            
+        else:
+            next_input = ids
+            
+    return ids[0].tolist()
+    
+    
+
+def generate(model, tokenizer, prompt, config, device=None, chat:bool=False):
+    
+    if not chat:
+        prompt_ids = [tokenizer.BOS] + tokenizer.encode(prompt)
+    
+    else:
+       prompt_ids, _ =  format_chat(tokenizer, prompt, system=system_for(prompt))
+    
+    
+    produced_ids  = generate_ids(
+        model, prompt_ids, config, eos_id=  tokenizer.EOS, device=device
+    )
+    
+    response_ids = produced_ids[len(prompt_ids):]
+    
+    return tokenizer.decode(response_ids) 

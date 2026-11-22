@@ -1,0 +1,37 @@
+[project]
+name = "jabarti"
+version = "0.1.0"
+description = "A bilingual (Arabic and English) GPT, built from scratch"
+readme = "README.md"
+authors = [
+    { name = "waleed-222", email = "waleed.ebrahem.19@gmail.com" }
+]
+requires-python = ">=3.12.3"
+dependencies = [
+    "torch>=2.0",
+    "tokenizers>=0.15",
+    "pandas>=3.0.6",
+    "pyarrow>=25.0.1",
+    "tqdm>=4.66",
+    "datasets>=5.0.1",
+    "huggingface-hub>=0.16.4,<2.0",
+    "trackio>=0.34.0",
+    "pytest>=9.1.1",
+    "trackio>=0.45.1"
+
+]
+
+[project.scripts]
+jabarti = "jabarti:main"
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0",]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu130" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
